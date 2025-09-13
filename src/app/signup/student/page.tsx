@@ -1,0 +1,126 @@
+
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Link as LinkIcon } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import type { Student } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+import { studentData } from '@/lib/data';
+
+const STUDENT_STORAGE_KEY = 'student-data';
+const LOGGED_IN_USER_ID_KEY = 'student-user-id';
+
+export default function StudentSignUpPage() {
+    const router = useRouter();
+    const { toast } = useToast();
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleSignUp = (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const studentList: Student[] = JSON.parse(localStorage.getItem(STUDENT_STORAGE_KEY) || JSON.stringify(studentData));
+            
+            const existingUser = studentList.find(s => s.email === email);
+            if (existingUser) {
+                toast({
+                    title: "Sign-up Failed",
+                    description: "An account with this email already exists. Please log in.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            const newId = `student-${Date.now()}`;
+            const newUser: Student = {
+                id: newId,
+                name: name,
+                email: email,
+                major: 'Undeclared',
+                expectedGraduationYear: new Date().getFullYear() + 4,
+                interests: [],
+                avatarUrl: `https://api.dicebear.com/7.x/initials/json?seed=${name}`,
+            };
+            
+            studentList.unshift(newUser);
+            localStorage.setItem(STUDENT_STORAGE_KEY, JSON.stringify(studentList));
+            localStorage.setItem(LOGGED_IN_USER_ID_KEY, newId);
+            
+            toast({
+                title: "Account Created!",
+                description: "Welcome to AlumniLink! You are now logged in.",
+            });
+            router.push('/student-dashboard');
+
+        } catch (error) {
+            console.error("Could not handle sign-up:", error);
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred during sign-up.",
+                variant: "destructive"
+            });
+        }
+    }
+
+  return (
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background">
+      <Image
+        src="https://picsum.photos/seed/304/1920/1080"
+        alt="Students studying"
+        fill
+        className="object-cover opacity-20"
+        data-ai-hint="students studying"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/50 to-background" />
+      <div className="relative z-10 flex flex-col items-center">
+        <Link href="/" className="flex items-center gap-2 mb-8">
+          <div className="bg-primary p-2 rounded-lg">
+            <LinkIcon className="text-primary-foreground h-6 w-6" />
+          </div>
+          <h1 className="text-3xl font-headline font-bold text-primary">
+            AlumniLink
+          </h1>
+        </Link>
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-headline">Create Your Student Account</CardTitle>
+            <CardDescription>Join to connect with Alumni.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+               <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="name">Full Name</Label>
+                <Input type="text" id="name" placeholder="Alex Doe" value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="email">School Email</Label>
+                <Input type="email" id="email" placeholder="alex@university.edu" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input type="password" id="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </div>
+              <Button type="submit" className="w-full" size="lg">
+                Sign Up
+              </Button>
+            </form>
+            <div className="mt-4 text-center text-sm">
+              Already have an account?{' '}
+              <Link href="/login/student" className="underline">
+                Log in
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
